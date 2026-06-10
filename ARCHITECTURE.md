@@ -1,8 +1,8 @@
 # Hybrid Retrieval POC — SQLite + PDF with Knowledge-Graph-Assisted Routing, Evidence Merging, and Verified Citations
 
-A single-workflow proof of concept that answers questions requiring **both** a relational database and a PDF corpus: the system routes the question, retrieves from each source, joins the evidence (with help from a lightweight knowledge graph), and produces **one merged answer in which every sentence is cited** — `[S#]` markers resolve to SQL result sets, `[D#]` markers resolve to exact PDF pages. The goal of the POC is to validate the **routing and evidence-merging layer**, not a UI.
+A single-workflow proof of concept that answers questions requiring **both** a relational database and a PDF corpus: the system routes the question, retrieves from each source, joins the evidence (with help from a lightweight knowledge graph), and produces **one merged answer in which every sentence is cited** — `[S#]` markers resolve to SQL result sets, `[D#]` markers resolve to exact PDF pages. The goal of the POC is to validate the **routing and evidence-merging layer**; a Streamlit chat UI (`app.py`, §4.9) now sits on top of that engine.
 
-The pipeline runs fully offline and deterministically. If `ANTHROPIC_API_KEY` is set, an LLM upgrades two stages (routing classification and answer synthesis) behind a *verified-or-fallback* gate; if the LLM output fails mechanical citation verification, it is discarded and the deterministic path produces the answer instead. The architecture is therefore testable in CI without model access, while remaining LLM-ready.
+The retrieval/merge **engine** runs fully offline and deterministically by default. If `OPENAI_API_KEY` is set, an LLM upgrades routing, NL→SQL and answer synthesis behind a *verified-or-fallback* gate; if the LLM output fails mechanical citation verification it is discarded and the deterministic path answers instead. The Streamlit UI (§4.9) runs the engine in an **LLM-only mode** (`force_llm`): the LLM routes, writes the SQL, and composes every answer with no deterministic fallback — but the same SQL safety gate and pure-function citation verifier still apply. The engine therefore stays testable in CI without model access, while the app showcases the full LLM-driven path.
 
 ---
 
@@ -12,10 +12,10 @@ The pipeline runs fully offline and deterministically. If `ANTHROPIC_API_KEY` is
 2. **Verifiable grounding, not "probably grounded".** Citation checking is a pure function over the answer text and the retrieved evidence set — no model judges whether the model cited correctly. An answer is only marked *verified* if every sentence carries a legal marker and both required source types are represented.
 3. **Exact locators on both sides.** DB citations resolve to the executed SQL, parameters, and the row ids that produced the fact (`db://app.db?kind=...`, `ids=1002,1003,1005`). Document citations resolve to file + page (`pdf://AeroFlow_Warranty_Policy.pdf#page=2`), which is why chunking is page-aligned.
 4. **Cross-source claims cite both sources.** The most valuable sentences in a merged answer are the ones that *join* a database fact with a document clause ("all 18 units … are inside the compressor coverage window **[S1][D1]**"). The POC makes these joins explicit, named **merge policies**, rather than hoping a model produces them.
-5. **Safety by construction.** The database can only be read: a semantic layer of parameterised SQL templates is the default; optional LLM-generated SQL must pass a validation gate (single statement, `SELECT`/`WITH` only, keyword denylist, enforced `LIMIT`) and even then executes on a `mode=ro` SQLite connection.
+5. **Safety by construction.** The database can only be read: a semantic layer of parameterised SQL templates is the default; LLM-generated SQL must pass a validation gate (**sqlglot AST check** + single statement, `SELECT`/`WITH` only, keyword denylist, enforced `LIMIT`) and even then executes on a `mode=ro` SQLite connection. The gate is enforced identically in LLM-only mode and on every self-correction retry.
 6. **Auditability.** Every run writes a structured trace JSON (`runs/trace_*.json`) capturing the routing decision, candidate rankings, graph hops, executed SQL, synthesis engine, verification result and per-stage timings. The trace — not the console — is the artefact that proves the routing/merging layer works.
 
-Out of scope by design: UI, authentication, streaming, multi-tenant concerns, neural embeddings (the retriever interface is built so they can be swapped in — see §12).
+Out of scope by design: authentication, multi-tenant concerns, and neural embeddings (the retriever interface is built so they can be swapped in — see §10). A Streamlit chat UI with answer streaming **is** included now (§4.9), but it is a demo surface, not a production front end.
 
 ---
 
@@ -82,6 +82,10 @@ Out of scope by design: UI, authentication, streaming, multi-tenant concerns, ne
 
 Document retrieval runs **before** SQL on purpose: chunks surfaced by the question can reveal doc-native entities (e.g. a service bulletin) that the graph then resolves to DB entities (the affected product), which in turn parameterise the SQL stage. Each side informs the other — that is the evidence-merging layer this POC exists to validate.
 
+**Front door.** In the chat UI a triage step (`router.triage`) runs *before* this pipeline and decides whether a turn needs the knowledge base at all; greetings and small talk are answered conversationally with no retrieval (§4.3).
+
+**LLM-only mode.** The diagram shows the engine's default behaviour, where the LLM is optional and every stage has a deterministic fallback. The app flips one switch (`force_llm`): the LLM classifier *is* the router, the LLM *writes* the SQL (inside a self-correction retry loop, §4.4), and the LLM synthesizer *is* the composer — with the safety gate and citation verifier unchanged.
+
 ---
 
 ## 3. End-to-end walkthrough (demo question 1)
@@ -124,16 +128,21 @@ The graph is used three ways, each cheap and each visible in the trace:
 
 Deterministic core: weighted phrase dictionaries (`SQL_HINTS`: "how many", "revenue", "order value", … / `PDF_HINTS`: "warranty", "specification", "bulletin", "say", …) produce two scores; thresholds map them to `sql` / `pdf` / `hybrid`, with "nothing fired" defaulting to both (recall over precision for a POC). Bridged entities override to hybrid. Confidence combines signal strength and score gap; the rationale is a human-readable sentence stored on the decision.
 
-If an API key is present, an LLM classifier runs first under a strict JSON contract (`{route, confidence, rationale}`); malformed output falls back to the heuristic. The `RoutingDecision` records which engine decided.
+If `OPENAI_API_KEY` is present, an LLM classifier runs first under a strict JSON contract; malformed output falls back to the heuristic — except in **LLM-only mode** (`force_llm`), where a failed classification raises rather than silently degrading. The `RoutingDecision` records which engine decided.
+
+**Front-door triage (`router.triage`).** Before the pipeline runs at all, a small LLM call (`temperature=0`) classifies the turn as chat vs. knowledge base and returns `{needs_retrieval, reply}`. Greetings, thanks and "what can you do" get the conversational `reply` directly — no retrieval, no citations; data questions proceed into routing. On any LLM/parse failure it defaults to `needs_retrieval=true`, so genuine questions are never dropped.
 
 ### 4.4 SQL retrieval (`sql_tool.py`)
 
-Two planners share one execution path:
+Two planners share one execution path, wrapped by a single safety gate:
 
-- **Semantic layer (default).** Four parameterised templates — `units_purchased`, `order_value`, `customers_for_product`, `support_tickets` — selected by intent regexes plus the resolved entities, with a date-window parser ("since 2025", "in 2025", "last year"). Templates are the production-realistic pattern: analysts vet the SQL once; the runtime only binds parameters. Each template's intent gate is deliberately narrow (e.g. `units_purchased` requires units-language, so "total order value" doesn't drag in a units row).
-- **NL→SQL (optional, LLM).** Generated SQL goes through `validate_sql()`: single statement, must start `SELECT`/`WITH`, denylist (`insert|update|delete|drop|alter|create|attach|pragma|…`), `LIMIT` injected if absent. Defense in depth: execution always uses `sqlite3.connect("file:…?mode=ro", uri=True)`, so even a missed pattern cannot write.
+- **Semantic layer (default / CLI).** Four parameterised templates — `units_purchased`, `order_value`, `customers_for_product`, `support_tickets` — selected by intent regexes plus the resolved entities, with a date-window parser ("since 2025", "in 2025", "last year"). Templates are the production-realistic pattern: analysts vet the SQL once; the runtime only binds parameters. Each template's intent gate is deliberately narrow (e.g. `units_purchased` requires units-language, so "total order value" doesn't drag in a units row).
+- **NL→SQL (LLM).** When no template matches — or *always*, in the app's **LLM-only mode** — the model writes the SQL. To keep it accurate it is given the schema, the resolved **entity→primary-key** mappings, the **distinct values of low-cardinality columns** (so it cannot invent a filter like `status='completed'`), aggregation guidance, and is called at **`temperature=0`**.
+- **Self-correction retry loop** (`_llm_sql_attempts`, LLM-only mode). Generate → safety-gate → execute → sanity-check, and on failure feed the *exact* reason back to the model to rewrite, up to `SQL_MAX_RETRIES` (default 3): a rejected statement, a SQLite error, or an empty / all-NULL result each produce specific feedback. Every attempt is recorded in `trace.sql_attempts`, and every retry re-passes the full gate — retries never weaken safety.
 
-Evidence content is a rendered result table; metadata carries the exact SQL, bound params, row count, the contributing row ids (surfaced in the bibliography as `ids=…`), and up to 10 raw rows for the synthesizer.
+**Safety gate (`validate_sql`, defence in depth).** Every statement — template or LLM-written — must pass a **sqlglot AST** check (parses to exactly one read query; no `Insert/Update/Delete/Drop/Create/Alter/Command/Set` nodes), the keyword denylist, single-statement and `SELECT`/`WITH`-only checks, and gets a `LIMIT` injected if absent. Execution always uses `sqlite3.connect("file:…?mode=ro", uri=True)`, so even a missed pattern cannot write.
+
+Evidence content is a rendered result table; metadata carries the exact SQL, bound params, row count, the contributing row ids (surfaced in the bibliography as `ids=…`), and up to 10 raw rows — which the UI renders as a table under each `[S#]` citation.
 
 ### 4.5 PDF retrieval (`doc_tool.py`)
 
@@ -144,7 +153,7 @@ Evidence content is a rendered result table; metadata carries the exact SQL, bou
 Both engines honour the same contract: *every sentence ends with ≥1 citation marker; cross-source claims cite both sides; no facts beyond the evidence.*
 
 - **Extractive composer (default, deterministic).** SQL evidence renders through per-kind sentence templates ("Acme Corp has purchased 18 AeroFlow X200 units since 2025 across 3 orders … [S1]"). For the top-3 document chunks, the best sentence is chosen by lexical overlap with the question (with a digit bonus, a stub filter, and an answer-type heuristic: action-seeking questions boost imperative sentences — that is how "what corrective action…" selects the RK-114 instruction rather than the adjacent warranty paragraph). Field labels like "Subject:" are stripped and a source-aware lead-in is prefixed ("The warranty policy states: …"). Then **merge policies** add the cross-source sentences: Policy A (purchase window × coverage term) and Policy B (ticket serial × bulletin affected range). Policies are domain rules here; with an LLM they generalise — the mechanism and verification stay identical.
-- **LLM synthesizer (optional).** Receives the evidence blocks verbatim plus the hard rules; its output is verified *before* acceptance. Failure ⇒ trace records `llm_synthesis_rejected` and the extractive answer ships. *Verified or replaced, never "probably fine".*
+- **LLM synthesizer (optional, `temperature=0`).** Receives the evidence blocks verbatim plus the hard rules. In the default/CLI engine its output is verified *before* acceptance — failure ⇒ trace records `llm_synthesis_rejected` and the extractive answer ships (*verified or replaced, never "probably fine"*). In the app's **LLM-only mode** there is no fallback: the model's answer is always shown, and verification still runs but *annotates* it verified / not-verified rather than substituting the extractive text.
 
 After composition, `prune_and_renumber` makes the bibliography exactly the cited set with gapless ids; the full retrieval set stays in the trace for audit.
 
@@ -154,19 +163,36 @@ Contract: `S#` ⇒ SQLite evidence, `D#` ⇒ PDF evidence; locator URIs `db://ap
 
 ### 4.8 Trace (`pipeline.py`)
 
-One JSON per run: question, routing decision, doc candidate rankings, KG expansions, the entity-expansion hop, executed SQL plans/errors, synthesis engine, rejection flags, verification warnings, final evidence list, and per-stage millisecond timings. Validating the POC = reading traces, not trusting prose.
+One JSON per run: question, the `force_llm` flag, routing decision, doc candidate rankings, KG expansions, the entity-expansion hop, executed SQL plans plus the per-retry `sql_attempts` log, synthesis engine, rejection flags, verification warnings, final evidence list, and per-stage millisecond timings. The Streamlit UI surfaces these stages live as **reasoning steps** (§4.9). Validating the POC = reading traces, not trusting prose.
+
+### 4.9 Streamlit chat UI (`app.py`)
+
+A chat application over `Pipeline.ask()` that runs the engine in **LLM-only mode** (`force_llm=True`). Sidebar navigation switches the main area between four views:
+
+- **💬 Chat** — ask a question and the answer streams in with a typing effect. The front-door triage (§4.3) first decides chat vs. knowledge base, so greetings get a plain reply and only data questions invoke RAG.
+- **📄 Documents Ingested** — the parsed/indexed PDF corpus with per-file status, plus PDF **upload** (saved into `data/seed_pdfs/` and re-ingested).
+- **🗄 SQL Data** — a read-only table browser of `app.db`.
+- **🕸 Knowledge Graph** — the live networkx graph rendered with `st.graphviz_chart`, plus node/edge tables.
+
+**Reasoning steps.** When RAG runs, `ask()` emits each stage through an `on_step` callback (routing → entities → document retrieval → KG hop → SQL incl. retries → synthesis); the UI shows them unfolding live in an `st.status` panel that collapses into a per-answer **🧠 Reasoning** block.
+
+**Citations in the UI.** Each `[D#]` shows a **download button** for the source PDF and the **exact chunk** the answer used; each `[S#]` shows the executed SQL and the **rows it returned** as a table.
+
+**Model picker.** A sidebar dropdown selects the OpenAI model at runtime (`llm.set_model`), defaulting to `gpt-4o-mini`.
+
+The UI is a read-only consumer of the pipeline — the engine contracts (safety gate, citation verifier, trace) are unchanged. Launch it with `streamlit run app.py` (§6, step 9).
 
 ---
 
 ## 5. Production-grade practices already present
 
-Parameterised SQL only, read-only DB connection, statement validation gate, typed Pydantic models at every boundary, deterministic fallback for every LLM touchpoint, mechanical citation verification, full per-run tracing with timings, page-exact document locators, row-id-exact DB locators, graceful degradation without network/API access, reproducible synthetic data generation, and a 27-test pytest suite covering routing, SQL safety, retrieval ranking, the graph hop, the citation contract, and all four end-to-end flows.
+Parameterised SQL templates, read-only DB connection, a **sqlglot AST + keyword-denylist validation gate** applied even to LLM-written SQL (inside a bounded **self-correction retry loop**), typed Pydantic models at every boundary, deterministic fallback for every LLM touchpoint (plus an explicit **LLM-only mode** that keeps the same gate and verifier while dropping the fallback), a **front-door chat/RAG triage**, `temperature=0` for all classification/SQL/synthesis calls, mechanical citation verification, full per-run tracing with timings (surfaced live as reasoning steps), page-exact document locators, row-id-exact DB locators, graceful degradation without network/API access, reproducible synthetic data generation, and a 27-test pytest suite covering routing, SQL safety, retrieval ranking, the graph hop, the citation contract, and all four end-to-end flows.
 
 ---
 
 ## 6. Build & run — detailed steps
 
-Requires Python 3.11+ (developed on 3.12). No API key needed for any step.
+Requires Python 3.11+ (developed on 3.13). No API key is needed for the CLI or tests (the engine is deterministic offline); the Streamlit UI's LLM-only mode needs `OPENAI_API_KEY`.
 
 **Step 1 — Get the code and enter the project.**
 ```bash
@@ -210,13 +236,14 @@ python -m pytest tests/ -q        # 27 passed
 
 **Step 8 — Inspect the audit artefacts.** Each `ask`/`demo` run writes `runs/trace_<timestamp>.json`; open one to see the routing decision, candidate rankings, the SQL that executed, and stage timings.
 
-**Step 9 (optional) — Enable the LLM path.**
+**Step 9 (optional) — Enable the LLM path and run the chat UI.** Put the key in `.env` (auto-loaded via python-dotenv) or export it:
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-export LLM_MODEL=claude-sonnet-4-6      # default
-python -m hybrid_rag.cli demo
+echo "OPENAI_API_KEY=sk-..." >> .env     # or: export OPENAI_API_KEY=sk-...
+export LLM_MODEL=gpt-4o-mini             # default; the UI also has a model picker
+python -m hybrid_rag.cli demo            # CLI: LLM tried first, verified-or-fallback
+streamlit run app.py                     # UI: LLM-only mode → http://localhost:8501
 ```
-Routing/synthesis now try the LLM first; anything failing the JSON contract or citation verification falls back to the deterministic engines, and the trace says so.
+In the CLI, routing/synthesis try the LLM first and fall back to the deterministic engines on any JSON/citation failure (the trace says so). The Streamlit UI runs **LLM-only**: the LLM routes, writes the SQL (with the self-correction retry loop), and composes every answer, with the safety gate and citation verifier still enforced.
 
 ---
 
@@ -285,7 +312,7 @@ The trace files make three metrics straightforward to compute offline: **routing
 
 ## 10. Productionization roadmap
 
-In rough order of value: swap the lexical retriever for neural embeddings behind the existing 3-method `Retriever` interface (pgvector/Qdrant), with RRF now fusing lexical + dense; replace regex SQL validation with AST validation (sqlglot) plus per-role row-level security and a query-cost budget; move the graph to a real store (or SQLite edge tables) with an entity-resolution pass replacing the hand alias map; generalise merge policies into an LLM-driven "join planner" whose outputs still pass the same pure-function verifier; add OpenTelemetry spans mirroring the trace keys; wire the trace-based metrics of §9 into CI as regression evals; expand the date/intent parsers or delegate them to the LLM planner under the same validation gate.
+In rough order of value: swap the lexical retriever for neural embeddings behind the existing 3-method `Retriever` interface (pgvector/Qdrant), with RRF now fusing lexical + dense; harden the SQL gate further (sqlglot AST validation is already in place) with per-role row-level security and a query-cost budget; move the graph to a real store (or SQLite edge tables) with an entity-resolution pass replacing the hand alias map; generalise merge policies into an LLM-driven "join planner" whose outputs still pass the same pure-function verifier; add OpenTelemetry spans mirroring the trace keys; wire the trace-based metrics of §9 into CI as regression evals; expand the date/intent parsers or delegate them to the LLM planner under the same validation gate.
 
 ---
 
@@ -297,19 +324,21 @@ hybrid-rag-poc/
 ├── README.md                  ← quickstart
 ├── requirements.txt
 ├── demo_output.txt            ← captured run of the 4-question demo
+├── app.py                     ← Streamlit chat UI (LLM-only, reasoning, citations)
+├── .env / .env.example        ← OPENAI_API_KEY, LLM_MODEL, retrieval tunables
 ├── src/hybrid_rag/
 │   ├── config.py              # paths + tunables (k, caps, thresholds, model)
 │   ├── models.py              # RoutingDecision / Evidence / Answer (Pydantic)
 │   ├── sample_data.py         # DB seed + PDF content + builders
 │   ├── ingest.py              # PDF→page chunks, BM25/TF-IDF indexes
 │   ├── kg.py                  # alias index, graph build, hop/expansion API
-│   ├── router.py              # signals + optional LLM classifier
-│   ├── sql_tool.py            # semantic layer, validation gate, ro executor
+│   ├── router.py              # signals, LLM classifier, chat/RAG triage
+│   ├── sql_tool.py            # templates + LLM NL→SQL, AST gate, retry loop, ro exec
 │   ├── doc_tool.py            # RRF hybrid retriever + KG expansion
 │   ├── citations.py           # id assignment, prune/renumber, verifier
 │   ├── synthesize.py          # extractive composer, merge policies, LLM synth
 │   ├── pipeline.py            # orchestration + trace persistence
-│   ├── llm.py                 # optional Anthropic client helpers
+│   ├── llm.py                 # OpenAI client + runtime model override
 │   └── cli.py                 # ingest / ask / demo
 ├── tests/                     # 27 tests: routing, SQL safety, retrieval,
 │   └── ...                    #   graph hop, citation contract, e2e

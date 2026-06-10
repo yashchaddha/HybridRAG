@@ -9,3 +9,7 @@ venv/
 
 # streamlit
 .streamlit/
+
+# generated artifacts — rebuilt by `ingest` on first run
+data/
+runs/

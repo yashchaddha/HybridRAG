@@ -29,6 +29,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 import streamlit as st
 
+# On Streamlit Community Cloud, secrets live in st.secrets; mirror them into the
+# environment so config.py / llm.py (which read os.getenv) pick them up.
+try:
+    for _k in ("OPENAI_API_KEY", "LLM_MODEL", "APP_PASSWORD"):
+        if _k in st.secrets:
+            os.environ[_k] = str(st.secrets[_k])
+except Exception:
+    pass
+
 from hybrid_rag import ingest, llm, router, sample_data
 from hybrid_rag.config import settings
 
@@ -379,7 +388,23 @@ def render_graph(pipe) -> None:
 # App
 # ---------------------------------------------------------------------------
 
+def require_password() -> None:
+    """Optional gate — active only if an APP_PASSWORD secret/env var is set."""
+    expected = os.getenv("APP_PASSWORD")
+    if not expected or st.session_state.get("_authed"):
+        return
+    st.title("🔒 Hybrid RAG")
+    pw = st.text_input("Enter password to continue", type="password")
+    if pw == expected:
+        st.session_state["_authed"] = True
+        st.rerun()
+    elif pw:
+        st.error("Incorrect password.")
+    st.stop()
+
+
 st.set_page_config(page_title="Hybrid RAG", page_icon="💬", layout="wide")
+require_password()
 
 with st.sidebar:
     st.title("💬 Hybrid RAG")
@@ -405,12 +430,9 @@ with st.sidebar:
             st.rerun()
 
 if not artifacts_ready():
-    st.info("First run — the search index needs to be built.")
-    if st.button("Build index"):
-        with st.spinner("Building database, PDFs, indexes, and graph…"):
-            reingest()
-        st.rerun()
-    st.stop()
+    with st.spinner("Building the knowledge base (first run)…"):
+        reingest()
+    st.rerun()
 
 pipe = load_pipeline()
 

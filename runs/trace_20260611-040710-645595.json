@@ -1,0 +1,152 @@
+{
+  "question": "Which companies have bought Aeroflow X200? and also tell me about the warranty of this product",
+  "force_llm": true,
+  "started_at": "2026-06-10T22:37:04.600346+00:00",
+  "routing": {
+    "route": "hybrid",
+    "needs_sql": true,
+    "needs_pdf": true,
+    "confidence": 0.85,
+    "matched_entities": [
+      "product:AF-X200"
+    ],
+    "signals": {
+      "sql_score": 2.0,
+      "pdf_score": 2.5,
+      "sql_hits": [
+        "bought"
+      ],
+      "pdf_hits": [
+        "warranty"
+      ],
+      "bridged_entities": [
+        "product:AF-X200"
+      ]
+    },
+    "rationale": "The question requires retrieving customer purchase data from the database and warranty information from the PDF documents.",
+    "engine": "llm"
+  },
+  "t_route_ms": 1349.9,
+  "doc_candidates": [
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p1",
+      "rrf": 0.03279,
+      "bm25": 13.188,
+      "cosine": 0.217
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p1",
+      "rrf": 0.032,
+      "bm25": 13.051,
+      "cosine": 0.173
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "rrf": 0.032,
+      "bm25": 11.827,
+      "cosine": 0.208
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p3",
+      "rrf": 0.03125,
+      "bm25": 8.05,
+      "cosine": 0.076
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "rrf": 0.03054,
+      "bm25": 7.285,
+      "cosine": 0.052
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p2",
+      "rrf": 0.03054,
+      "bm25": 7.092,
+      "cosine": 0.061
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p2",
+      "rrf": 0.02985,
+      "bm25": 6.444,
+      "cosine": 0.032
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p3",
+      "rrf": 0.02859,
+      "bm25": 2.889,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "fieldwork arena paper-p1-2",
+      "rrf": 0.02857,
+      "bm25": 3.006,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "fieldwork arena paper-p2-4",
+      "rrf": 0.02786,
+      "bm25": 3.845,
+      "cosine": 0.0
+    }
+  ],
+  "kg_expansion": [],
+  "t_docs_ms": 4.8,
+  "sql_attempts": [
+    {
+      "try": 1,
+      "sql": "SELECT GROUP_CONCAT(DISTINCT c.name) AS companies, p.warranty_years FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id JOIN customers c ON o.customer_id = c.id WHERE p.id = 1 LIMIT 50",
+      "rows": 1,
+      "ok": true
+    }
+  ],
+  "sql_plans": [
+    {
+      "kind": "llm_sql",
+      "engine": "llm"
+    }
+  ],
+  "t_sql_ms": 1807.7,
+  "t_synth_ms": 2879.3,
+  "engine": "llm",
+  "verified": true,
+  "warnings": [],
+  "evidence": [
+    {
+      "id": "S1",
+      "source": "sqlite",
+      "locator": "db://app.db?kind=llm_sql",
+      "score": 1.0
+    },
+    {
+      "id": "D1",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=1",
+      "score": 0.03279
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1",
+      "score": 0.032
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=1",
+      "score": 0.032
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=3",
+      "score": 0.03125
+    },
+    {
+      "id": "D5",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=2",
+      "score": 0.03054
+    }
+  ],
+  "t_total_ms": 6045.2
+}

@@ -1,0 +1,144 @@
+{
+  "question": "How many AeroFlow X200 units has Acme Corp purchased since 2025?",
+  "started_at": "2026-06-10T21:08:51.911783+00:00",
+  "routing": {
+    "route": "hybrid",
+    "needs_sql": true,
+    "needs_pdf": true,
+    "confidence": 0.89,
+    "matched_entities": [
+      "customer:1",
+      "product:AF-X200"
+    ],
+    "signals": {
+      "sql_score": 5.0,
+      "pdf_score": 0.5,
+      "sql_hits": [
+        "how many",
+        "purchased",
+        "since"
+      ],
+      "pdf_hits": [],
+      "bridged_entities": [
+        "product:AF-X200"
+      ]
+    },
+    "rationale": "sql_score=5.0 (how many, purchased, since); pdf_score=0.5 (none); bridged entities=['product:AF-X200']",
+    "engine": "heuristic"
+  },
+  "t_route_ms": 1.3,
+  "doc_candidates": [
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p1",
+      "rrf": 0.03279,
+      "bm25": 2.745,
+      "cosine": 0.383
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p1",
+      "rrf": 0.03226,
+      "bm25": 0.0,
+      "cosine": 0.126
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "rrf": 0.03126,
+      "bm25": 0.0,
+      "cosine": 0.11
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p3",
+      "rrf": 0.03125,
+      "bm25": 0.0,
+      "cosine": 0.051
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p2",
+      "rrf": 0.03058,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "rrf": 0.03054,
+      "bm25": 0.0,
+      "cosine": 0.036
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p3",
+      "rrf": 0.03008,
+      "bm25": 0.0,
+      "cosine": 0.033
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p2",
+      "rrf": 0.02963,
+      "bm25": 0.0,
+      "cosine": 0.024
+    }
+  ],
+  "kg_expansion": [
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "via": "product:AF-X200",
+      "cosine": 0.036
+    }
+  ],
+  "t_docs_ms": 1.7,
+  "sql_plans": [
+    {
+      "kind": "units_purchased",
+      "engine": "template"
+    }
+  ],
+  "t_sql_ms": 1.8,
+  "t_synth_ms": 0.2,
+  "engine": "extractive",
+  "verified": true,
+  "warnings": [],
+  "evidence": [
+    {
+      "id": "S1",
+      "source": "sqlite",
+      "locator": "db://app.db?kind=units_purchased",
+      "score": 1.0
+    },
+    {
+      "id": "D1",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1",
+      "score": 0.03279
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=1",
+      "score": 0.03226
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=1",
+      "score": 0.03126
+    },
+    {
+      "id": "D4",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=3",
+      "score": 0.03125
+    },
+    {
+      "id": "D5",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=2",
+      "score": 0.03058
+    },
+    {
+      "id": "D6",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=2",
+      "score": 0.02752
+    }
+  ],
+  "t_total_ms": 5.1
+}

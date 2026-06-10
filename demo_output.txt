@@ -1,0 +1,124 @@
+================================================================================================
+Q: Acme Corp has reported compressor failures on their AeroFlow X200 units. How many X200
+units have they purchased since 2025, and are these failures covered under warranty? Include
+any relevant service bulletins.
+------------------------------------------------------------------------------------------------
+Route   : HYBRID  (confidence 0.95, engine heuristic)
+Entities: customer:1, product:AF-X200
+Bridged : product:AF-X200 (present in DB and documents)
+KG chunk: +AeroFlow_X200_Specification-p1  (via product:AF-X200)
+KG chunk: +AeroFlow_X200_Specification-p2  (via product:AF-X200)
+------------------------------------------------------------------------------------------------
+Answer  (extractive, verified):
+  Acme Corp has purchased 18 AeroFlow X200 units since 2025 across 3 orders (first on
+  2025-01-15, most recent on 2026-02-10) [S1]. Acme Corp has logged 3 support tickets for
+  the AeroFlow X200 citing compressor failure (opened between 2025-06-03 and 2026-01-12)
+  [S2]. The warranty policy states: Compressor failures attributable to manufacturing
+  defects, including start relay defects, are covered for the full five-year term [D1].
+  Field Service Bulletin FSB-2025-03 reports: intermittent compressor shutdown on AeroFlow
+  X200 units [D2]. The warranty policy states: Warranty claims must be submitted through the
+  AeroFlow service portal within thirty (30) days of fault detection and must include the
+  unit serial number and proof of purchase [D3]. Because compressor coverage runs five years
+  from delivery [D1], all 18 units delivered between 2025-01-15 and 2026-02-10 are inside
+  the compressor coverage window [S1][D1]. Ticket evidence cites serial X2-25A-0142 [S2],
+  which falls in the affected X2-25A range, so repairs on that unit are covered at no charge
+  under the bulletin regardless of the standard term [D2].
+
+Sources:
+  [S1] SQLite · orders ⋈ order_items ⋈ customers ⋈ products (unit totals) · rows=1 ·
+  ids=1002,1003,1005
+        SQL: SELECT c.name AS customer, p.name AS product, SUM(oi.quantity) AS total_units,
+  COUNT(DISTINCT o.id) AS num_orders, MIN(o.order_date) AS first_order, MAX(o.order_date) AS
+  last_order, GROUP_CONCAT(DISTINCT o.id) AS order_ids FROM orders o JOIN order_items oi ON
+  oi.order_id = o.id JOIN customers c ON c.id = o.customer_id JOIN products p ON p.id =
+  oi.product_id WHERE 1=1 AND c.id = :cust_id AND p.id = :prod_id AND o.order_date >=
+  :date_from GROUP BY c.id, p.id ORDER BY total_units DESC
+  [S2] SQLite · support_tickets (matching issues) · rows=3 · ids=1,2,3
+        SQL: SELECT t.id AS ticket_id, c.name AS customer, p.name AS product, t.opened_date,
+  t.issue_type, t.status, t.summary FROM support_tickets t JOIN customers c ON c.id =
+  t.customer_id JOIN products p ON p.id = t.product_id WHERE 1=1 AND t.customer_id =
+  :cust_id AND t.product_id = :prod_id AND (t.issue_type LIKE :kw OR t.summary LIKE :kw)
+  ORDER BY t.opened_date
+  [D1] PDF · AeroFlow_Warranty_Policy.pdf · p.2 · §Compressor Coverage
+        pdf://AeroFlow_Warranty_Policy.pdf#page=2
+  [D2] PDF · Field_Service_Bulletin_FSB-2025-03.pdf · p.1 · §Field Service Bulletin
+  FSB-2025-03
+        pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1
+  [D3] PDF · AeroFlow_Warranty_Policy.pdf · p.3 · §Claims Procedure
+        pdf://AeroFlow_Warranty_Policy.pdf#page=3
+
+================================================================================================
+Q: What was Acme Corp's total order value in 2025?
+------------------------------------------------------------------------------------------------
+Route   : SQL  (confidence 0.75, engine heuristic)
+Entities: customer:1
+------------------------------------------------------------------------------------------------
+Answer  (extractive, verified):
+  Acme Corp's total order value in 2025 was $29,876.00 across 3 orders [S1].
+
+Sources:
+  [S1] SQLite · orders ⋈ order_items (order value) · rows=1 · ids=1002,1003,1004
+        SQL: SELECT c.name AS customer, ROUND(SUM(oi.quantity * oi.unit_price), 2) AS
+  total_value, COUNT(DISTINCT o.id) AS num_orders, GROUP_CONCAT(DISTINCT o.id) AS order_ids
+  FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN customers c ON c.id =
+  o.customer_id JOIN products p ON p.id = oi.product_id WHERE 1=1 AND c.id = :cust_id AND
+  o.order_date >= :date_from AND o.order_date <= :date_to GROUP BY c.id
+
+================================================================================================
+Q: What does the warranty policy say about units operated below 5 degrees C?
+------------------------------------------------------------------------------------------------
+Route   : PDF  (confidence 0.73, engine heuristic)
+Entities: -
+------------------------------------------------------------------------------------------------
+Answer  (extractive, verified):
+  The warranty policy states: This warranty does not cover damage caused by operation below
+  5 degrees C ambient, supply voltage outside 200-240 V, unauthorised modification or
+  service, or failure to follow the published maintenance schedule [D1]. The warranty policy
+  states: This policy applies to all AeroFlow-branded equipment sold on or after 1 January
+  2024, including the AeroFlow X100 and AeroFlow X200 dehumidifier lines [D2]. The product
+  specification notes: Operation below 5 degrees C can cause coil icing and compressor
+  stress and is outside the supported envelope [D3].
+
+Sources:
+  [D1] PDF · AeroFlow_Warranty_Policy.pdf · p.2 · §Compressor Coverage
+        pdf://AeroFlow_Warranty_Policy.pdf#page=2
+  [D2] PDF · AeroFlow_Warranty_Policy.pdf · p.1 · §AeroFlow Limited Warranty Policy
+        pdf://AeroFlow_Warranty_Policy.pdf#page=1
+  [D3] PDF · AeroFlow_X200_Specification.pdf · p.2 · §Operating Conditions
+        pdf://AeroFlow_X200_Specification.pdf#page=2
+
+================================================================================================
+Q: Which customers purchased the product affected by service bulletin FSB-2025-03, and what
+corrective action does it recommend?
+------------------------------------------------------------------------------------------------
+Route   : HYBRID  (confidence 0.95, engine heuristic)
+Entities: bulletin:FSB-2025-03
+KG hop  : +product:AF-X200  (co-mentioned with bulletin:FSB-2025-03)
+------------------------------------------------------------------------------------------------
+Answer  (extractive, verified):
+  3 customers have purchased AeroFlow X200: Acme Corp (23 units), Borealis Labs (3 units)
+  and Cascade Foods (2 units) [S1]. Field Service Bulletin FSB-2025-03 reports: Root cause
+  analysis traced the fault to start relay component lot L-1142 (part SR-1142), which can
+  stick under thermal load and trip the compressor [D1]. Field Service Bulletin FSB-2025-03
+  reports: Certified technicians must install Relay Retrofit Kit RK-114 and update
+  controller firmware to version 2.4.1 on all affected units [D2]. The warranty policy
+  states: This warranty does not cover damage caused by operation below 5 degrees C ambient,
+  supply voltage outside 200-240 V, unauthorised modification or service, or failure to
+  follow the published maintenance schedule [D3].
+
+Sources:
+  [S1] SQLite · customers who purchased AeroFlow X200 · rows=3 ·
+  ids=1001,1002,1003,1005,1007,1009
+        SQL: SELECT c.name AS customer, SUM(oi.quantity) AS total_units, COUNT(DISTINCT
+  o.id) AS num_orders, GROUP_CONCAT(DISTINCT o.id) AS order_ids FROM orders o JOIN
+  order_items oi ON oi.order_id = o.id JOIN customers c ON c.id = o.customer_id JOIN
+  products p ON p.id = oi.product_id WHERE 1=1 AND p.id = :prod_id GROUP BY c.id ORDER BY
+  total_units DESC
+  [D1] PDF · Field_Service_Bulletin_FSB-2025-03.pdf · p.1 · §Field Service Bulletin
+  FSB-2025-03
+        pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1
+  [D2] PDF · Field_Service_Bulletin_FSB-2025-03.pdf · p.2 · §Corrective Action
+        pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=2
+  [D3] PDF · AeroFlow_Warranty_Policy.pdf · p.2 · §Compressor Coverage
+        pdf://AeroFlow_Warranty_Policy.pdf#page=2
+

@@ -1,0 +1,11 @@
+# secrets — never commit the real env file
+.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# streamlit
+.streamlit/

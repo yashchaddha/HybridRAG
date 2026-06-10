@@ -1,0 +1,142 @@
+{
+  "question": "Is compressor failure on the X200 covered under warranty?",
+  "force_llm": true,
+  "started_at": "2026-06-10T22:39:14.211146+00:00",
+  "routing": {
+    "route": "pdf",
+    "needs_sql": false,
+    "needs_pdf": true,
+    "confidence": 0.9,
+    "matched_entities": [
+      "product:AF-X200"
+    ],
+    "signals": {
+      "sql_score": 0.5,
+      "pdf_score": 4.0,
+      "sql_hits": [],
+      "pdf_hits": [
+        "warranty",
+        "covered"
+      ],
+      "bridged_entities": [
+        "product:AF-X200"
+      ]
+    },
+    "rationale": "The question pertains to warranty coverage, which is likely detailed in the warranty policy PDF.",
+    "engine": "llm"
+  },
+  "t_route_ms": 1069.7,
+  "doc_candidates": [
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p2",
+      "rrf": 0.03252,
+      "bm25": 12.909,
+      "cosine": 0.195
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p2",
+      "rrf": 0.03227,
+      "bm25": 13.523,
+      "cosine": 0.11
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "rrf": 0.03151,
+      "bm25": 8.381,
+      "cosine": 0.121
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p1",
+      "rrf": 0.0315,
+      "bm25": 12.892,
+      "cosine": 0.101
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p1",
+      "rrf": 0.03078,
+      "bm25": 8.453,
+      "cosine": 0.072
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "rrf": 0.03054,
+      "bm25": 6.778,
+      "cosine": 0.092
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p3",
+      "rrf": 0.02963,
+      "bm25": 4.296,
+      "cosine": 0.038
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p3",
+      "rrf": 0.02963,
+      "bm25": 4.199,
+      "cosine": 0.042
+    },
+    {
+      "chunk": "fieldwork arena paper-p1",
+      "rrf": 0.02899,
+      "bm25": 1.882,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "fieldwork arena paper-p2",
+      "rrf": 0.02721,
+      "bm25": 1.054,
+      "cosine": 0.0
+    }
+  ],
+  "kg_expansion": [
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "via": "product:AF-X200",
+      "cosine": 0.092
+    }
+  ],
+  "t_docs_ms": 4.7,
+  "t_synth_ms": 4781.0,
+  "engine": "llm",
+  "verified": true,
+  "warnings": [],
+  "evidence": [
+    {
+      "id": "D1",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=2",
+      "score": 0.03252
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=2",
+      "score": 0.03227
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=2",
+      "score": 0.03151
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1",
+      "score": 0.0315
+    },
+    {
+      "id": "D5",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=1",
+      "score": 0.03078
+    },
+    {
+      "id": "D6",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=1",
+      "score": 0.0277
+    }
+  ],
+  "t_total_ms": 5858.0
+}

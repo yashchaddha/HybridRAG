@@ -1,0 +1,112 @@
+{
+  "question": "Hello",
+  "started_at": "2026-06-10T20:50:18.826570+00:00",
+  "routing": {
+    "route": "hybrid",
+    "needs_sql": true,
+    "needs_pdf": true,
+    "confidence": 0.55,
+    "matched_entities": [],
+    "signals": {
+      "sql_score": 0.0,
+      "pdf_score": 0.0,
+      "sql_hits": [],
+      "pdf_hits": [],
+      "bridged_entities": []
+    },
+    "rationale": "sql_score=0.0 (none); pdf_score=0.0 (none); bridged entities=none",
+    "engine": "heuristic"
+  },
+  "t_route_ms": 0.8,
+  "doc_candidates": [
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p1",
+      "rrf": 0.03279,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p2",
+      "rrf": 0.03226,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p3",
+      "rrf": 0.03175,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "rrf": 0.03125,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "rrf": 0.03077,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p3",
+      "rrf": 0.0303,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p1",
+      "rrf": 0.02985,
+      "bm25": 0.0,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p2",
+      "rrf": 0.02941,
+      "bm25": 0.0,
+      "cosine": 0.0
+    }
+  ],
+  "kg_expansion": [],
+  "t_docs_ms": 4.7,
+  "sql_plans": [],
+  "t_sql_ms": 0.1,
+  "t_synth_ms": 0.3,
+  "engine": "extractive",
+  "verified": true,
+  "warnings": [],
+  "evidence": [
+    {
+      "id": "D1",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=1",
+      "score": 0.03279
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=2",
+      "score": 0.03226
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=3",
+      "score": 0.03175
+    },
+    {
+      "id": "D4",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=1",
+      "score": 0.03125
+    },
+    {
+      "id": "D5",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=2",
+      "score": 0.03077
+    }
+  ],
+  "t_total_ms": 6.2
+}

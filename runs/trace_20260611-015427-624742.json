@@ -1,0 +1,137 @@
+{
+  "question": "Which customers purchased the product affected by service bulletin FSB-2025-03, and what corrective action does it recommend?",
+  "started_at": "2026-06-10T20:24:27.623655+00:00",
+  "routing": {
+    "route": "hybrid",
+    "needs_sql": true,
+    "needs_pdf": true,
+    "confidence": 0.95,
+    "matched_entities": [
+      "bulletin:FSB-2025-03"
+    ],
+    "signals": {
+      "sql_score": 4.5,
+      "pdf_score": 8.0,
+      "sql_hits": [
+        "purchased",
+        "customers",
+        "which customers"
+      ],
+      "pdf_hits": [
+        "bulletin",
+        "service bulletin",
+        "recommend",
+        "corrective"
+      ],
+      "bridged_entities": []
+    },
+    "rationale": "sql_score=4.5 (purchased, customers, which customers); pdf_score=8.0 (bulletin, service bulletin, recommend, corrective); bridged entities=none",
+    "engine": "heuristic"
+  },
+  "t_route_ms": 0.2,
+  "doc_candidates": [
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p1",
+      "rrf": 0.03279,
+      "bm25": 6.7,
+      "cosine": 0.286
+    },
+    {
+      "chunk": "Field_Service_Bulletin_FSB-2025-03-p2",
+      "rrf": 0.03226,
+      "bm25": 6.647,
+      "cosine": 0.148
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p2",
+      "rrf": 0.0315,
+      "bm25": 3.271,
+      "cosine": 0.038
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p3",
+      "rrf": 0.03102,
+      "bm25": 2.758,
+      "cosine": 0.044
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p2",
+      "rrf": 0.03078,
+      "bm25": 3.237,
+      "cosine": 0.011
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p1",
+      "rrf": 0.03077,
+      "bm25": 3.055,
+      "cosine": 0.025
+    },
+    {
+      "chunk": "AeroFlow_X200_Specification-p3",
+      "rrf": 0.02963,
+      "bm25": 0.931,
+      "cosine": 0.0
+    },
+    {
+      "chunk": "AeroFlow_Warranty_Policy-p1",
+      "rrf": 0.02963,
+      "bm25": 0.922,
+      "cosine": 0.0
+    }
+  ],
+  "kg_expansion": [],
+  "t_docs_ms": 0.5,
+  "entity_expansion": {
+    "product:AF-X200": "co-mentioned with bulletin:FSB-2025-03"
+  },
+  "sql_plans": [
+    {
+      "kind": "customers_for_product",
+      "engine": "template"
+    }
+  ],
+  "t_sql_ms": 0.2,
+  "t_synth_ms": 0.1,
+  "engine": "extractive",
+  "verified": true,
+  "warnings": [],
+  "evidence": [
+    {
+      "id": "S1",
+      "source": "sqlite",
+      "locator": "db://app.db?kind=customers_for_product",
+      "score": 1.0
+    },
+    {
+      "id": "D1",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=1",
+      "score": 0.03279
+    },
+    {
+      "id": "D2",
+      "source": "pdf",
+      "locator": "pdf://Field_Service_Bulletin_FSB-2025-03.pdf#page=2",
+      "score": 0.03226
+    },
+    {
+      "id": "D3",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=2",
+      "score": 0.0315
+    },
+    {
+      "id": "D4",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_Warranty_Policy.pdf#page=3",
+      "score": 0.03102
+    },
+    {
+      "id": "D5",
+      "source": "pdf",
+      "locator": "pdf://AeroFlow_X200_Specification.pdf#page=2",
+      "score": 0.03078
+    }
+  ],
+  "t_total_ms": 1.1
+}

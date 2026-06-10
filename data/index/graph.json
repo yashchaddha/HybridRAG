@@ -455,13 +455,13 @@
   {
    "rel": "MENTIONS",
    "source": "chunk:Field_Service_Bulletin_FSB-2025-03-p1",
-   "target": "product:AF-X200",
+   "target": "bulletin:FSB-2025-03",
    "key": 0
   },
   {
    "rel": "MENTIONS",
    "source": "chunk:Field_Service_Bulletin_FSB-2025-03-p1",
-   "target": "bulletin:FSB-2025-03",
+   "target": "product:AF-X200",
    "key": 0
   },
   {

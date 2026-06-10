@@ -1,0 +1,15 @@
+# Render Blueprint — deploys the Streamlit app as a Docker web service.
+# Render → New → Blueprint → pick this repo. Set OPENAI_API_KEY in the dashboard.
+services:
+  - type: web
+    name: hybrid-rag
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false          # secret — set this in the Render dashboard
+      - key: LLM_MODEL
+        value: gpt-4o-mini

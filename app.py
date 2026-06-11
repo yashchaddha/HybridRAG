@@ -482,8 +482,6 @@ with st.sidebar:
                     ["💬 Chat", "📄 Documents Ingested", "🗄 SQL Data", "🕸 Knowledge Graph"],
                     label_visibility="collapsed")
     st.divider()
-    st.caption("**LLM-only mode** — every query is routed, queried (LLM-written SQL), "
-               "and answered by the LLM.")
     if os.getenv("OPENAI_API_KEY"):
         default = settings.llm_model if settings.llm_model in MODELS else "Custom…"
         pick = st.selectbox("Model", MODELS, index=MODELS.index(default))

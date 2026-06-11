@@ -7,8 +7,9 @@ __pycache__/
 .venv/
 venv/
 
-# streamlit
-.streamlit/
+# streamlit — keep the committed theme config, ignore everything else (e.g. secrets.toml)
+.streamlit/*
+!.streamlit/config.toml
 
 # generated artifacts — rebuilt by `ingest` on first run
 data/

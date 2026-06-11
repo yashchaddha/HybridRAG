@@ -1,0 +1,6 @@
+# Streamlit theme.
+# `primaryColor` is the accent used by `type="primary"` buttons — the "Send ▸"
+# and "Save & re-ingest" buttons. Streamlit's default is a coral-red (#FF4B4B);
+# we override it to green. Hover/active shades are derived from this automatically.
+[theme]
+primaryColor = "#1e8e3e"

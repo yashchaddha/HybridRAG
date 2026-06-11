@@ -407,7 +407,73 @@ def require_password() -> None:
     st.stop()
 
 
+def _inject_theme_css() -> None:
+    """Warm touches the [theme] palette can't express on its own: load the
+    display/body fonts and lay a soft, layered warmth over the flat canvas.
+    The colours themselves live in .streamlit/config.toml."""
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+        /* Layered warm canvas instead of one flat fill — kept faint and calm. */
+        .stApp {
+            background:
+                radial-gradient(1100px 520px at 82% -8%, #FCEBD6 0%, rgba(252,235,214,0) 62%),
+                radial-gradient(880px 480px at -6% 112%, #F2E1CA 0%, rgba(242,225,202,0) 55%),
+                linear-gradient(180deg, #FBF6EE 0%, #F7EEE0 100%);
+            background-attachment: fixed;
+        }
+        [data-testid="stHeader"] { background: transparent; }
+
+        /* Sidebar reads as a soft warm panel with a hairline edge. */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #F6ECDD 0%, #F0E3CF 100%);
+            border-right: 1px solid #E7D9C6;
+        }
+
+        /* Fraunces headings: a touch tighter for a warm, editorial feel. */
+        h1, h2, h3 { letter-spacing: -0.01em; }
+
+        /* Buttons: soft corners, a warm hairline, and a gentle hover lift. */
+        .stButton > button,
+        .stDownloadButton > button,
+        .stFormSubmitButton > button {
+            border-radius: 0.65rem;
+            box-shadow: 0 1px 2px rgba(67,56,46,.06);
+            transition: transform .12s ease, box-shadow .14s ease,
+                        border-color .14s ease, color .14s ease;
+        }
+        /* Secondary buttons (suggestion chips, Clear chat, ⬇ download) warm on hover. */
+        .stButton > button:not([kind="primary"]):hover,
+        .stDownloadButton > button:hover {
+            transform: translateY(-1px);
+            border-color: #C2683F;
+            color: #B0572F;
+            box-shadow: 0 8px 18px -10px rgba(120,80,40,.45);
+        }
+        /* The terracotta primary buttons (Send ▸, Save & re-ingest) get a warm glow. */
+        .stFormSubmitButton > button,
+        .stButton > button[kind="primary"] {
+            border-color: transparent;
+            box-shadow: 0 8px 18px -8px rgba(194,104,63,.55);
+        }
+        .stFormSubmitButton > button:hover,
+        .stButton > button[kind="primary"]:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px -8px rgba(194,104,63,.65);
+        }
+
+        /* Inputs: soft rounded fields that sit calmly on the sand. */
+        .stTextInput input, .stTextArea textarea { border-radius: 0.65rem; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 st.set_page_config(page_title="Hybrid RAG", page_icon="💬", layout="wide")
+_inject_theme_css()
 require_password()
 
 with st.sidebar:

@@ -1,6 +1,26 @@
-# Streamlit theme.
-# `primaryColor` is the accent used by `type="primary"` buttons — the "Send ▸"
-# and "Save & re-ingest" buttons. Streamlit's default is a coral-red (#FF4B4B);
-# we override it to green. Hover/active shades are derived from this automatically.
+# Streamlit theme — a relaxed, warm palette.
+#
+# Soft cream + sand surfaces, espresso-brown text (never harsh black), and a
+# terracotta accent for primary buttons / selected controls. Streamlit applies
+# this to every widget. The fonts named below are loaded via an @import that
+# app.py injects (_inject_theme_css); the layered background warmth lives there
+# too, since a single flat `backgroundColor` can't express it.
 [theme]
-primaryColor = "#1e8e3e"
+base = "light"
+
+# Warm canvas + surfaces
+backgroundColor          = "#FBF6EE"   # soft cream — main canvas
+secondaryBackgroundColor = "#F3E9DA"   # warm sand — sidebar, inputs, chips
+textColor                = "#42382E"   # warm espresso brown
+
+# Terracotta accent — primary buttons, selected radio, focus rings
+primaryColor = "#C2683F"
+linkColor    = "#B0572F"   # slightly deeper clay, readable on cream
+
+# Soft, warm edges
+borderColor = "#E7D9C6"
+baseRadius  = "0.625rem"
+
+# Distinctive, warm type: a soft display serif paired with a humanist sans
+headingFont = "'Fraunces', Georgia, 'Times New Roman', serif"
+font        = "'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif"

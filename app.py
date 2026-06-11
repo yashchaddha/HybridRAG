@@ -297,10 +297,14 @@ def render_chat(pipe) -> None:
         if chip_cols[i % 2].button(suggestion, key=f"chip_{i}", width="stretch"):
             st.session_state["qbox"] = suggestion
 
-    question = st.text_input(
-        "Ask a question", key="qbox", label_visibility="collapsed",
-        placeholder="Ask about orders, warranty, specs, or bulletins…")
-    if st.button("Send ▸", key="send", type="primary") and question.strip():
+    # A form so pressing Enter in the box submits; Send sits on the right.
+    with st.form("ask_form", clear_on_submit=False, border=False):
+        c1, c2 = st.columns([6, 1], vertical_alignment="bottom")
+        question = c1.text_input(
+            "Ask a question", key="qbox", label_visibility="collapsed",
+            placeholder="Ask about orders, warranty, specs, or bulletins…")
+        sent = c2.form_submit_button("Send ▸", type="primary", width="stretch")
+    if sent and question.strip():
         messages.append({"role": "user", "content": question.strip()})
         st.session_state["clear_box"] = True
         st.rerun()
